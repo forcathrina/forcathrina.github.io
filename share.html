@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Share Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 10px 0;
+            text-align: center;
+            width: 100%;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            padding: 20px;
+            text-align: center;
+            width: 80%;
+            max-width: 800px;
+        }
+        .content h2 {
+            color: #333;
+        }
+        .output {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            word-wrap: break-word;
+            width: 100%;
+        }
+        .output img {
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Share Page</h1>
+    </header>
+    <div class="content">
+        <h2>클립보드 데이터를 여기에 붙여넣기 하세요</h2>
+        <div class="output" id="output"></div>
+    </div>
+
+    <script>
+        function updateURLWithBase64(dataUrl) {
+            console.log("updateURLWithBase64 호출됨");
+            const newUrl = `${window.location.origin}${window.location.pathname}#${encodeURIComponent(dataUrl)}`;
+            console.log("생성된 URL: ", newUrl);
+            history.replaceState(null, '', newUrl);
+        }
+
+        function getBase64FromUrl() {
+            console.log("getBase64FromUrl 호출됨");
+            const hash = window.location.hash;
+            console.log("현재 URL 해시: ", hash);
+            if (hash) {
+                const encoded = hash.substring(1);
+                return decodeURIComponent(encoded);
+            }
+            return null;
+        }
+
+        function displayData(dataUrl) {
+            console.log("displayData 호출됨");
+            const output = document.getElementById('output');
+            console.log("dataUrl: ", dataUrl);
+            if (dataUrl.startsWith('data:image/')) {
+                output.innerHTML = `<img src="${dataUrl}" alt="Pasted Image"/>`;
+            } else if (dataUrl.startsWith('data:text/plain')) {
+                const text = atob(dataUrl.split(',')[1]);
+                output.innerText = text;
+            } else {
+                output.innerText = 'Unsupported data type';
+            }
+        }
+
+        document.addEventListener('paste', (event) => {
+            console.log("paste 이벤트 발생");
+            const items = event.clipboardData.items;
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+
+            for (const item of items) {
+                if (item.kind === 'string') {
+                    console.log("텍스트 아이템 발견");
+                    item.getAsString((text) => {
+                        const dataUrl = `data:text/plain;base64,${btoa(text)}`;
+                        console.log("생성된 dataUrl: ", dataUrl);
+                        updateURLWithBase64(dataUrl);
+                        displayData(dataUrl);
+                    });
+                } else if (item.kind === 'file') {
+                    console.log("파일 아이템 발견");
+                    const file = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const dataUrl = event.target.result;
+                        console.log("생성된 dataUrl: ", dataUrl);
+                        updateURLWithBase64(dataUrl);
+                        displayData(dataUrl);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log("DOMContentLoaded 이벤트 발생");
+            const base64Data = getBase64FromUrl();
+            if (base64Data) {
+                displayData(base64Data);
+            }
+        });
+    </script>
+</body>
+</html>
